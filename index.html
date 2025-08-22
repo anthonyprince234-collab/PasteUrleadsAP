@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aussie Lead Finder – Anthony</title>
+  <style>
+    :root { --bg: #0b1220; --card: #121a2b; --accent: #4f8cff; --text: #e6eefc; --muted:#94a3b8; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text)}
+    header{padding:24px 16px;text-align:center;border-bottom:1px solid #1f2a44;background:linear-gradient(180deg,#0f172a,#0b1220)}
+    header h1{margin:0;font-size:clamp(22px,3.2vw,32px);letter-spacing:.3px}
+    header p{margin:.4rem 0 0;color:var(--muted)}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px}
+    .card{background:var(--card);border:1px solid #1f2a44;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:18px;margin-bottom:24px}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(12,1fr)}
+    .grid>.col-6{grid-column:span 6}
+    .grid>.col-4{grid-column:span 4}
+    .grid>.col-3{grid-column:span 3}
+    .grid>.col-12{grid-column:span 12}
+    @media (max-width:800px){.grid>*{grid-column:span 12}}
+    label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:6px}
+    input,textarea,select,button{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #1f2a44;background:#0e1627;color:var(--text)}
+    input::placeholder,textarea::placeholder{color:#6b7da6}
+    button{cursor:pointer;background:var(--accent);border-color:transparent;color:#031130;font-weight:700;transition:.15s transform ease}
+    button:hover{transform:translateY(-1px)}
+    .toolbar{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+    .toolbar button{flex:1 1 160px}
+    table{width:100%;border-collapse:collapse;margin-top:14px}
+    thead th{font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:#a7b3cc;border-bottom:1px solid #263252;padding:10px}
+    tbody td{border-bottom:1px dashed #203054;padding:10px;vertical-align:top}
+    a{color:#9cc2ff}
+    .badge{display:inline-block;padding:.2rem .5rem;border:1px solid #2b3a5f;border-radius:999px;color:#a7b3cc;font-size:.75rem}
+    .pill{display:inline-flex;align-items:center;gap:6px;background:#0f1930;border:1px solid #263252;border-radius:999px;padding:.35rem .6rem}
+    footer{color:#7f8fb0;text-align:center;padding:24px 8px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔎 Aussie Lead Finder <span class="badge">by Anthony Principe</span></h1>
+    <p>Search businesses & real estate listings in Australia, then export to CSV.</p>
+  </header>
+
+  <main class="wrap">
+
+    <!-- Paste Leads Card -->
+    <section class="card">
+      <h2>📋 Paste Leads (Google Maps)</h2>
+      <div class="grid">
+        <div class="col-12">
+          <label for="pasteLeads">Paste Leads Here</label>
+          <textarea id="pasteLeads" rows="10" placeholder="Paste multiple leads from Google Maps"></textarea>
+        </div>
+        <div class="col-12 toolbar">
+          <button id="processPasteBtn">Process Leads</button>
+          <button id="downloadBusinessBtn" disabled>Download CSV</button>
+        </div>
+      </div>
+      <table id="businessTable">
+        <thead>
+          <tr><th>Name</th><th>Address</th><th>Phone</th><th>Email</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Business Leads Card -->
+    <section class="card">
+      <h2>🏢 Business Leads</h2>
+      <div class="grid">
+        <div class="col-4">
+          <label for="keyword">Business / Keyword</label>
+          <input id="keyword" type="text" placeholder="e.g., plumber, cafe, dentist" />
+        </div>
+        <div class="col-6">
+          <label for="location">Location in Australia</label>
+          <input id="location" type="text" placeholder="Start typing a suburb, city, or address" />
+        </div>
+        <div class="col-3">
+          <label for="radius">Radius</label>
+          <select id="radius">
+            <option value="2000">2 km</option>
+            <option value="5000" selected>5 km</option>
+            <option value="10000">10 km</option>
+            <option value="25000">25 km</option>
+            <option value="50000">50 km</option>
+          </select>
+        </div>
+        <div class="col-3">
+          <label for="maxResults">Max Results</label>
+          <select id="maxResults">
+            <option>20</option>
+            <option selected>60</option>
+            <option>100</option>
+          </select>
+        </div>
+        <div class="col-12 toolbar">
+          <button id="searchBusinessBtn">Search Business Leads</button>
+          <button id="autoBusinessBtn">Auto Generate</button>
+        </div>
+      </div>
+      <table id="businessSearchTable">
+        <thead>
+          <tr><th>Name</th><th>Address</th><th>Phone</th><th>Website</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Real Estate Leads Card -->
+    <section class="card">
+      <h2>🏠 Real Estate Leads</h2>
+      <div class="grid">
+        <div class="col-6">
+          <label for="reLocation">Location in Australia</label>
+          <input id="reLocation" type="text" placeholder="Enter suburb, city" />
+        </div>
+        <div class="col-3">
+          <label for="reMax">Max Listings</label>
+          <select id="reMax">
+            <option>20</option>
+            <option selected>50</option>
+            <option>100</option>
+          </select>
+        </div>
+        <div class="col-12 toolbar">
+          <button id="searchRealEstateBtn">Search Real Estate</button>
+          <button id="autoRealEstateBtn">Auto Generate</button>
+          <button id="downloadRealEstateBtn" disabled>Download Real Estate CSV</button>
+          <span class="pill" id="realEstateStatus">Idle</span>
+        </div>
+      </div>
+      <table id="realEstateTable">
+        <thead>
+          <tr><th>Title</th><th>Address</th><th>Price</th><th>Link</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 Aussie Lead Finder | Built by Anthony</p>
+  </footer>
+
+  <script>
+    let businessResults = [];
+    let realEstateResults = [];
+
+    // CSV Helper
+    function toCSV(rows) {
+      if (!rows.length) return "";
+      const headers = Object.keys(rows[0]);
+      const csvContent = [
+        headers.join(","), 
+        ...rows.map(row => headers.map(h => `"${(row[h] ?? "").toString().replace(/"/g, '""')}"`).join(",")) 
+      ].join("\n");
+      return csvContent;
+    }
+
+    function downloadCSV(rows, filename) {
+      if (!rows.length) { alert("No leads to download yet!"); return; }
+      const csv = toCSV(rows);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("downloadBusinessBtn").addEventListener("click", () => {
+      downloadCSV(businessResults,"BusinessLeads.csv");
+    });
+
+    document.getElementById("downloadRealEstateBtn").addEventListener("click", () => {
+      downloadCSV(realEstateResults,"RealEstateLeads.csv");
+    });
+
+    // ==== Smart Paste Parser ====
+    function processPasteLeadsSmart(rawText){
+      const unwanted = [
+        "Results","Get the app","Share","Directions","Website","Visit Site",
+        "Sponsored","·","All round maintenance","Handyman/Handywoman/Handyperson",
+        "Bathroom remodeler","Property Repairs GC","Carpentry","Hardware store",
+        "Open","Closed","Opens","Closes","AM","PM"
+      ];
+      rawText = rawText.replace(/[^\w\s.,@+-\/\(\)\n]+/g,' ');
+      const lines = rawText.split(/\r?\n|,/).map(l => l.trim()).filter(l => l && !unwanted.includes(l));
+      const results = [];
+      let current = { Name:"", Address:"", Phone:"", Email:"" };
+      lines.forEach(line=>{
+        const phoneMatch = line.match(/(\+61\s?\d{1,4}\s?\d{3,4}\s?\d{3,4}|\(?0\d{1,4}\)?\s?\d{3,4}\s?\d{3,4})/);
+        if(phoneMatch){ current.Phone = phoneMatch[0].replace(/\s+/g,''); return; }
+        const emailMatch = line.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+        if(emailMatch){ current.Email = emailMatch[0]; return; }
+        if(!current.Name){ current.Name = line; return; }
+        if(current.Address) current.Address += ", "+line;
+        else current.Address = line;
+        if(current.Name && current.Address && current.Phone){
+          results.push({...current});
+          current = { Name:"", Address:"", Phone:"", Email:"" };
+        }
+      });
+      if(current.Name && (current.Address || current.Phone)) results.push({...current});
+      return results;
+    }
+
+    document.getElementById("processPasteBtn").addEventListener("click",()=>{
+      const rawText = document.getElementById("pasteLeads").value;
+      businessResults = processPasteLeadsSmart(rawText);
+      const tbody = document.querySelector("#businessTable tbody");
+      tbody.innerHTML = "";
+      businessResults.forEach(lead=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${lead.Name}</td><td>${lead.Address}</td><td>${lead.Phone}</td><td>${lead.Email}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("downloadBusinessBtn").disabled = businessResults.length===0;
+      alert(`Processed ${businessResults.length} leads!`);
+    });
+
+    // ==== Business Leads Search ====
+    async function fetchYelp(keyword, location, maxResults){
+      try{
+        const res = await fetch(`http://localhost:5000/api/yelp?term=${encodeURIComponent(keyword)}&location=${encodeURIComponent(location)}&limit=${maxResults}`);
+        const data = await res.json();
+        return (data.businesses||[]).map(b => ({
+          Name: b.name,
+          Address: (b.location?.display_address||[]).join(", "),
+          Phone: b.display_phone || "",
+          Website: b.url || ""
+        }));
+      }catch(e){console.error(e); return [];}
+    }
+
+    async function fetchOSM(keyword, location, radius, maxResults){
+      try{
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&countrycodes=au&limit=1`);
+        const geoData = await geoRes.json();
+        if(!geoData.length) return [];
+        const {lat, lon} = geoData[0];
+        const query = `[out:json][timeout:25];(node["amenity"="${keyword}"](around:${radius},${lat},${lon});node["shop"="${keyword}"](around:${radius},${lat},${lon});node["name"~"${keyword}",i](around:${radius},${lat},${lon}););out body ${maxResults};`;
+        const overpassRes = await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
+        const data = await overpassRes.json();
+        return (data.elements||[]).map(e => ({
+          Name: e.tags.name||"",
+          Address: (e.tags["addr:full"] || [e.tags["addr:housename"], e.tags["addr:housenumber"], e.tags["addr:street"], e.tags["addr:suburb"], e.tags["addr:city"], e.tags["addr:postcode"]].filter(Boolean).join(", ")) || "",
+          Phone: e.tags.phone||"",
+          Website: e.tags.website||""
+        }));
+      }catch(e){console.error(e); return [];}
+    }
+
+    async function searchBusiness(){
+      const keyword = document.getElementById("keyword").value.trim();
+      const location = document.getElementById("location").value.trim();
+      const radius = parseInt(document.getElementById("radius").value);
+      const maxResults = parseInt(document.getElementById("maxResults").value);
+      if(!keyword||!location){alert("Enter keyword & location");return;}
+      const tbody = document.querySelector("#businessSearchTable tbody");
+      tbody.innerHTML = "<tr><td colspan='4'>Searching...</td></tr>";
+      const yelpResults = await fetchYelp(keyword, location, maxResults);
+      const osmResults = await fetchOSM(keyword, location, radius, maxResults);
+      businessResults = [...yelpResults, ...osmResults].slice(0, maxResults);
+      tbody.innerHTML = "";
+      businessResults.forEach(b=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${b.Name}</td><td>${b.Address}</td><td>${b.Phone}</td><td>${b.Website}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("downloadBusinessBtn").disabled = businessResults.length===0;
+    }
+
+    // ==== Real Estate Leads Search ====
+    async function fetchRealEstate(location, maxResults){
+      try{
+        const res = await fetch(`http://localhost:5000/api/realestate?location=${encodeURIComponent(location)}&limit=${maxResults}`);
+        const data = await res.json();
+        return (data.results||[]).map(r => ({
+          Title: r.title,
+          Address: r.address,
+          Price: r.price,
+          Link: r.url
+        }));
+      }catch(e){console.error(e); return [];}
+    }
+
+    async function searchRealEstate(){
+      const location = document.getElementById("reLocation").value.trim();
+      const maxResults = parseInt(document.getElementById("reMax").value);
+      if(!location){alert("Enter location");return;}
+      const tbody = document.querySelector("#realEstateTable tbody");
+      tbody.innerHTML = "<tr><td colspan='4'>Searching...</td></tr>";
+      realEstateResults = await fetchRealEstate(location, maxResults);
+      tbody.innerHTML = "";
+      realEstateResults.forEach(r=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${r.Title}</td><td>${r.Address}</td><td>${r.Price}</td><td><a href="${r.Link}" target="_blank">${r.Link}</a></td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("downloadRealEstateBtn").disabled = realEstateResults.length===0;
+    }
+
+    document.getElementById("searchBusinessBtn").addEventListener("click", searchBusiness);
+    document.getElementById("searchRealEstateBtn").addEventListener("click", searchRealEstate);
+  </script>
+</body>
+</html>
