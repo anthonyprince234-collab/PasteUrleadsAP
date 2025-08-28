@@ -101,7 +101,7 @@
       </div>
       <table id="businessSearchTable">
         <thead>
-          <tr><th>Name</th><th>Address</th><th>Phone</th><th>Website</th></tr>
+          <tr><th>Name</th><th>Address</th><th>Phone</th><th>Website</th><th>Email</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -180,31 +180,34 @@
       downloadCSV(realEstateResults,"RealEstateLeads.csv");
     });
 
-    // ==== Smart Paste Parser ====
+    // ==== Smart Paste Parser for ALL Leads ====
     function processPasteLeadsSmart(rawText){
-      const unwanted = [
-        "Results","Get the app","Share","Directions","Website","Visit Site",
-        "Sponsored","·","All round maintenance","Handyman/Handywoman/Handyperson",
-        "Bathroom remodeler","Property Repairs GC","Carpentry","Hardware store",
-        "Open","Closed","Opens","Closes","AM","PM"
-      ];
-      rawText = rawText.replace(/[^\w\s.,@+-\/\(\)\n]+/g,' ');
-      const lines = rawText.split(/\r?\n|,/).map(l => l.trim()).filter(l => l && !unwanted.includes(l));
+      rawText = rawText.replace(/[^\w\s.,@+-\/\(\)\n]+/g,' '); // clean weird chars
+      const lines = rawText.split(/\r?\n|,/).map(l => l.trim()).filter(l => l);
       const results = [];
       let current = { Name:"", Address:"", Phone:"", Email:"" };
-      lines.forEach(line=>{
-        const phoneMatch = line.match(/(\+61\s?\d{1,4}\s?\d{3,4}\s?\d{3,4}|\(?0\d{1,4}\)?\s?\d{3,4}\s?\d{3,4})/);
+
+      lines.forEach(line => {
+        const phoneMatch = line.match(/(\+?\d{1,4}[\s-]?\d{3,4}[\s-]?\d{3,4}[\s-]?\d{0,4})/);
         if(phoneMatch){ current.Phone = phoneMatch[0].replace(/\s+/g,''); return; }
+
         const emailMatch = line.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
         if(emailMatch){ current.Email = emailMatch[0]; return; }
+
+        // skip ratings & Open/Closed info
+        if(line.match(/^\d+(\.\d+)?\(\d+\)$/) || /Open|Closed|Closes|AM|PM|Book online/i.test(line)) return;
+
         if(!current.Name){ current.Name = line; return; }
         if(current.Address) current.Address += ", "+line;
         else current.Address = line;
-        if(current.Name && current.Address && current.Phone){
+
+        // push if we have Name and at least Phone or Address
+        if(current.Name && (current.Address || current.Phone)){
           results.push({...current});
           current = { Name:"", Address:"", Phone:"", Email:"" };
         }
       });
+
       if(current.Name && (current.Address || current.Phone)) results.push({...current});
       return results;
     }
@@ -223,34 +226,29 @@
       alert(`Processed ${businessResults.length} leads!`);
     });
 
-    // ==== Business Leads Search ====
-    async function fetchYelp(keyword, location, maxResults){
-      try{
-        const res = await fetch(`http://localhost:5000/api/yelp?term=${encodeURIComponent(keyword)}&location=${encodeURIComponent(location)}&limit=${maxResults}`);
-        const data = await res.json();
-        return (data.businesses||[]).map(b => ({
-          Name: b.name,
-          Address: (b.location?.display_address||[]).join(", "),
-          Phone: b.display_phone || "",
-          Website: b.url || ""
-        }));
-      }catch(e){console.error(e); return [];}
-    }
-
+    // ==== Business Leads Search (OSM only, with Email) ====
     async function fetchOSM(keyword, location, radius, maxResults){
       try{
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&countrycodes=au&limit=1`);
         const geoData = await geoRes.json();
         if(!geoData.length) return [];
         const {lat, lon} = geoData[0];
-        const query = `[out:json][timeout:25];(node["amenity"="${keyword}"](around:${radius},${lat},${lon});node["shop"="${keyword}"](around:${radius},${lat},${lon});node["name"~"${keyword}",i](around:${radius},${lat},${lon}););out body ${maxResults};`;
+        const osmKey = keyword.toLowerCase() === "dentist" ? "dentist" : keyword;
+        const query = `[out:json][timeout:25];
+          (
+            node["amenity"="${osmKey}"](around:${radius},${lat},${lon});
+            node["shop"="${osmKey}"](around:${radius},${lat},${lon});
+            node["name"~"${osmKey}",i](around:${radius},${lat},${lon});
+          );
+          out body ${maxResults};`;
         const overpassRes = await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
         const data = await overpassRes.json();
         return (data.elements||[]).map(e => ({
           Name: e.tags.name||"",
           Address: (e.tags["addr:full"] || [e.tags["addr:housename"], e.tags["addr:housenumber"], e.tags["addr:street"], e.tags["addr:suburb"], e.tags["addr:city"], e.tags["addr:postcode"]].filter(Boolean).join(", ")) || "",
           Phone: e.tags.phone||"",
-          Website: e.tags.website||""
+          Website: e.tags.website||"",
+          Email: e.tags.email || e.tags["contact:email"] || ""
         }));
       }catch(e){console.error(e); return [];}
     }
@@ -262,14 +260,13 @@
       const maxResults = parseInt(document.getElementById("maxResults").value);
       if(!keyword||!location){alert("Enter keyword & location");return;}
       const tbody = document.querySelector("#businessSearchTable tbody");
-      tbody.innerHTML = "<tr><td colspan='4'>Searching...</td></tr>";
-      const yelpResults = await fetchYelp(keyword, location, maxResults);
+      tbody.innerHTML = "<tr><td colspan='5'>Searching...</td></tr>";
       const osmResults = await fetchOSM(keyword, location, radius, maxResults);
-      businessResults = [...yelpResults, ...osmResults].slice(0, maxResults);
+      businessResults = osmResults.slice(0, maxResults);
       tbody.innerHTML = "";
       businessResults.forEach(b=>{
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${b.Name}</td><td>${b.Address}</td><td>${b.Phone}</td><td>${b.Website}</td>`;
+        tr.innerHTML = `<td>${b.Name}</td><td>${b.Address}</td><td>${b.Phone}</td><td>${b.Website}</td><td>${b.Email||""}</td>`;
         tbody.appendChild(tr);
       });
       document.getElementById("downloadBusinessBtn").disabled = businessResults.length===0;
